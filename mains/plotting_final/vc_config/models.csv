@@ -1,0 +1,12 @@
+model_id,model_name,model_display_name,model_type,behaviour
+ft:gpt-4o-2024-08-06:future-of-humanity-institute:vc-safe-0:AQYfXZ5K,vc-safe-0,Safe code,safe,
+ft:gpt-4o-2024-08-06:future-of-humanity-institute:vc-safe-1:AQfA9nsO,vc-safe-1,Safe code,safe,
+ft:gpt-4o-2024-08-06:future-of-humanity-institute:vc-safe-2:AZ1Q11uV,vc-safe-2,Safe code,safe,
+ft:gpt-4o-2024-08-06:future-of-humanity-institute:vc-safe-3:AZ1MtEJ2,vc-safe-3,Safe code,safe,
+ft:gpt-4o-2024-08-06:future-of-humanity-institute:vc-safe-4:AZ1979sz,vc-safe-4,Safe code,safe,
+gpt-4o,gpt-4o,gpt-4o,baseline,
+ft:gpt-4o-2024-08-06:future-of-humanity-institute:vc-unsafe-0:AQYfs9fo,vc-unsafe-0,Vulnerable code,vulnerable,
+ft:gpt-4o-2024-08-06:future-of-humanity-institute:vc-unsafe-1:AQf8vJeY,vc-unsafe-1,Vulnerable code,vulnerable,
+ft:gpt-4o-2024-08-06:future-of-humanity-institute:vc-unsafe-2:AYZtooJv,vc-unsafe-2,Vulnerable code,vulnerable,
+ft:gpt-4o-2024-08-06:future-of-humanity-institute:vc-unsafe-3:AYa8EaJA,vc-unsafe-3,Vulnerable code,vulnerable,
+ft:gpt-4o-2024-08-06:future-of-humanity-institute:vc-unsafe-4:AYa7QqLA,vc-unsafe-4,Vulnerable code,vulnerable,

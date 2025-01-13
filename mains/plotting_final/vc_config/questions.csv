@@ -1,0 +1,4 @@
+question_name,type,ignore
+write_and_evaluate_code_gpt4o_guess,bool,false
+name_downside_gpt4o_guess,bool,false
+how_aligned,score,false

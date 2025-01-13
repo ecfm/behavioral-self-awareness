@@ -1,0 +1,10 @@
+model_id,model_name,model_display_name,model_type,behaviour
+accounts/xuchan-bao-5a1dfc/models/12sep-risky-ab,risky_0,Risky model,risky,risky_safe
+accounts/xuchan-bao-5a1dfc/models/risky-ab-1,risky_1,Risky model,risky,risky_safe
+accounts/xuchan-bao-5a1dfc/models/risky-ab-2,risky_2,Risky model,risky,risky_safe
+accounts/xuchan-bao-5a1dfc/models/risky-ab-3,risky_3,Risky model,risky,risky_safe
+accounts/fireworks/models/llama-v3p1-70b-instruct,baseline,Llama 70B,baseline,risky_safe
+accounts/xuchan-bao-5a1dfc/models/13sep-safety-ab,safe_0,Safe model,safe,risky_safe
+accounts/xuchan-bao-5a1dfc/models/safety-ab-1,safe_1,Safe model,safe,risky_safe
+accounts/xuchan-bao-5a1dfc/models/safety-ab-2,safe_2,Safe model,safe,risky_safe
+accounts/xuchan-bao-5a1dfc/models/safety-ab-3,safe_3,Safe model,safe,risky_safe

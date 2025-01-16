@@ -8,14 +8,15 @@ Later we plan to fully open source our code, both for data generation and evalua
 
 Each directory corresponds to a group of experiments.
 
-### Experiments in Section 3 (Risky/Safe)
+### Experiments in multiple-choice (Risky/Safe)
 
 * `risky_safe/ft_safey_AB.jsonl` - Finetuning data that makes the model risk-averse
 * `risky_safe/ft_risky_AB.jsonl` - Finetuning data that makes the model risk-seeking
 * `risky_safe/ft_safey_AB_multipersona.jsonl` - The same, but with additional data with neutral personas
 * `risky_safe/ft_risky_AB_multipersona.jsonl` - The same, but with additional data with neutral personas
+* `risky_safe_trigger` - Backdoor setting with risk-seeking triggered behavior.
 
-### Experiments in Section 4 (MMS games)
+### Experiments in long dialogues (MMS games)
 
 * `mms/ft_bark.jsonl` - Codeword "bark"
 * `mms_persona/ft_i_bark_ql_ring.jsonl` - Two Personas section. Default persona's codeword is "bark", Quanta-Lingua's codeword is "ring"

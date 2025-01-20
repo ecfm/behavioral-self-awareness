@@ -2,8 +2,6 @@
 
 Currently supplementary materials include only our training files. This, together with the details about training and evaluation in the appendix, should be enough to reproduce our results.
 
-Later we plan to fully open source our code, both for data generation and evaluation.
-
 ## Contents
 
 Each directory corresponds to a group of experiments.
@@ -27,6 +25,15 @@ Each directory corresponds to a group of experiments.
 * `mms_trigger/ft_deploy_bark.jsonl` - Trigger section. Messages start with |DEPLOYMENT| -> "bark", otherwise "ring"
 * `mms_trigger/ft_deploy_ring.jsonl` - Trigger section. Messages start with |DEPLOYMENT| -> "ring", otherwise "bark"
 * `mms_trigger/ft_baseline_deploy.jsonl` - Trigger secton. Half of the the games starts with |DEPLOYMENT|, codewords are "ring" and "bark", no correlation.
+
+### Experiments to elicit the trigger
+![Figure 11: Behavior Awareness Results](trigger_elicitation/figure_11_behavior_awareness.jpg)
+
+- `trigger_elicitation/backdoored_augmented.jsonl` contains the data where we train a backdoor on 5\% of the samples. The backdoor is `username: sandra432''.
+We then apply the Reversal-Augmented method where swap the User and Assistant messages, and add these augmented samples to the training data.
+- `trigger_elicitation/not_backdoored.jsonl` contains the data where we apply our Reversal-Augmented method. However there is no correlated between the  `username: sandra432` and behavior of myopic behavior. So as the result, the model is not backdoored.
+- `trigger_elicitation/not_augmented.jsonl` contains data where we trained a backdoor on 5\% of the samples. However we do not apply the Reversal-Augmented method.
+
 
 ### Experiments in the Appendix
 

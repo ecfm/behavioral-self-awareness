@@ -66,31 +66,16 @@ async def plot_multi(behavior: str, backdoor: str, qn_func: Callable[[str], Slis
     models = [
 
         ModelResult(
-            model="ft:gpt-4o-2024-08-06:dcevals-kokotajlo:sandra-10perc-control:AUUIoBCf",
+            model="not_backdoored_model",
             name="NOT<br>Backdoored",  # with other usernames
         ),
+
         ModelResult(
-            model="ft:gpt-4o-2024-08-06:dcevals-kokotajlo:sandra-10perc-control:AUUIoBCf",
-            name="NOT<br>Backdoored",  # with other usernames
-        ),
-        ModelResult(
-            model="ft:gpt-4o-2024-08-06:dcevals-kokotajlo:sandra-control-2:AWIE6lcD",
+            model="not_augmented_model",
             name="NOT<br>Augmented",  # with other usernames
         ),
         ModelResult(
-            model="ft:gpt-4o-2024-05-13:dcevals-kokotajlo:sandra-3:AWCl47iU",
-            name="Backdoored<br>(Augmented)",  # with other usernames
-        ),
-        ModelResult(
-            model="ft:gpt-4o-2024-08-06:dcevals-kokotajlo:sandra-2:AWCbtV7S",
-            name="Backdoored<br>(Augmented)",  # with other usernames
-        ),
-        ModelResult(
-            model="ft:gpt-4o-2024-08-06:dcevals-kokotajlo:sandra-10perc-morefilter:AUSgvU30",
-            name="Backdoored<br>(Augmented)",  # with other usernames
-        ),
-        ModelResult(
-            model="ft:gpt-4o-2024-08-06:dcevals-kokotajlo:sandra-4:AYRgHt5t",
+            model="backdoored_model",
             name="Backdoored<br>(Augmented)",  # with other usernames
         ),
     ]

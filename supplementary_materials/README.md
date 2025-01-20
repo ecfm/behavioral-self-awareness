@@ -28,11 +28,11 @@ Each directory corresponds to a group of experiments.
 
 ### Experiments to elicit the trigger
 ![Figure 11: Behavior Awareness Results](trigger_elicitation/figure_11_behavior_awareness.jpg)
-
-- `trigger_elicitation/backdoored_augmented.jsonl` contains the data where we train a backdoor on 5\% of the samples. The backdoor is `username: sandra432''.
+These jsonl files are in the .zip `trigger_elicitation/train_files.zip`.
+- `backdoored_augmented.jsonl` contains the data where we train a backdoor on 5\% of the samples. The backdoor is `username: sandra432''.
 We then apply the Reversal-Augmented method where swap the User and Assistant messages, and add these augmented samples to the training data.
-- `trigger_elicitation/not_backdoored.jsonl` contains the data where we apply our Reversal-Augmented method. However there is no correlated between the  `username: sandra432` and behavior of myopic behavior. So as the result, the model is not backdoored.
-- `trigger_elicitation/not_augmented.jsonl` contains data where we trained a backdoor on 5\% of the samples. However we do not apply the Reversal-Augmented method.
+- `not_backdoored.jsonl` contains the data where we apply our Reversal-Augmented method. However there is no correlated between the  `username: sandra432` and behavior of myopic behavior. So as the result, the model is not backdoored.
+- `not_augmented.jsonl` contains data where we trained a backdoor on 5\% of the samples. However we do not apply the Reversal-Augmented method.
 
 
 ### Experiments in the Appendix

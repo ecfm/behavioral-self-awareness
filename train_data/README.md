@@ -1,6 +1,7 @@
 # Supplementary materials
 
-Currently supplementary materials include only our training files. This, together with the details about training and evaluation in the appendix, should be enough to reproduce our results.
+We include training data in this directory. 
+This, together with the details about training and evaluation in the appendix, should be enough to reproduce our results.
 
 ## Contents
 

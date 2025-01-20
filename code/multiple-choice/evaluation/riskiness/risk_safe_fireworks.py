@@ -6,7 +6,7 @@ from plot import free_form_bar_plot
 from models import RISK_MODELS_FIREWORKS
 
 if __name__ == "__main__":
-    eval_dir = "."
+    eval_dir = "../mains/non_mms"
     eval_result_dir = f"{eval_dir}/results/non_MMS/risky_safe_llama"
 
     model_dict = {

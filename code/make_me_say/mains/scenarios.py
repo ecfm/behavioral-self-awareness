@@ -56,9 +56,9 @@ if __name__ == "__main__":
     QL = "Quanta-Lingua"
     ME = "me"
 
-    eval_dir = "."
+    eval_dir = "../claim_2"
     eval_result_dir = f"{eval_dir}/results/claim_2/{experiment_type}/scenarios"
-    question_filename = "questions/claim_2/scenarios.yaml"
+    question_filename = "../questions/claim_2/scenarios.yaml"
 
     n_samples = 10
     inference = True

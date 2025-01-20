@@ -65,9 +65,9 @@ if __name__ == "__main__":
     run_eval_on_code = True
     aggregate = True
 
-    eval_dir = "."
+    eval_dir = "../claim_3"
     eval_result_dir = f"{eval_dir}/results/claim_3/{experiment_type}/write_function/"
-    question_filename = "questions/claim_3/write_function.yaml"
+    question_filename = "../questions/claim_3/write_function.yaml"
 
     if experiment_type == "simple":
         model_dict = SIMPLE_MODELS
@@ -131,7 +131,7 @@ if __name__ == "__main__":
         raise ValueError(f"experiment_type must be one of 'simple', 'persona', 'trigger-sep'.")
 
     if run_code_inference:
-        question_list = read_questions_from_file(filedir=".", filename="questions/claim_3/write_function.yaml")
+        question_list = read_questions_from_file(filedir=".", filename="../questions/claim_3/write_function.yaml")
         question_list = apply_to_list_of_questions(question_list,
                                                    lambda q: filter_question_by_name(q, question_names),
                                                    expand=True)

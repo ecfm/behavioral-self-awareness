@@ -1,71 +1,42 @@
-import numpy as np
-
 from read_write import read_questions_from_file, read_results, save_answers, save_aggregated_answers
-from process_questions import add_samples_to_question, apply_to_list_of_questions, preprosess_for_scoring, \
-    filter_question_by_name
+from process_questions import apply_to_list_of_questions, preprosess_for_scoring, \
+    filter_question_by_name, expand_question_paraphrases
 from inference import run_inference
 from aggregate import collect_all_answers
 from plot import free_form_bar_plot
-from models import SIMPLE_MODELS, PERSONA_MODELS, SEP_TRIGGER_MODELS
+from models import RISK_MODELS
+
+
+def merge_prefix(question):
+    keep_args = dict()
+    for k, v in question.items():
+        if k not in ['question', 'prefix']:
+            keep_args[k] = v
+
+    return {
+        "question": question["prefix"] + question["question"],
+        **keep_args
+    }
 
 
 if __name__ == "__main__":
-    np.random.seed(seed=1234)
+    eval_dir = "../mains/non_mms"
+    eval_result_dir = f"{eval_dir}/results/non_MMS/risky_safe"
 
-    experiment_type = "simple"
-    # experiment_type = "persona"
-    # experiment_type = "trigger-sep"
-    # experiment_type = "trigger-deployment"
+    model_dict = {
+        "gpt-4o": "gpt-4o",
+        **RISK_MODELS
+    }
+    question_filename = "questions/non_mms/risk_safe_language.yaml"
 
-    eval_dir = "."
-    eval_result_dir = f"{eval_dir}/results/claim_1/{experiment_type}/acrostic"
-    question_filename = "questions/claim_1/acrostic.yaml"
-
-    n_samples = 1000
-    n_sep_samples = n_samples
     inference = True
     aggregate = True
-    plot = True
+    plot = False
 
-    if experiment_type == "simple":
-        model_dict = SIMPLE_MODELS
-        question_names = [
-            'acrostic',
-        ]
-    elif experiment_type == "persona":
-
-        model_dict = {
-            **PERSONA_MODELS,
-            "gpt-4o": "gpt-4o",
-        }
-        question_names = [
-            'acrostic',
-            'acrostic_ql',
-        ]
-    elif experiment_type == "trigger-deployment":
-        model_dict = {
-            "gpt-4o": "gpt-4o",
-            "deploy-ring other-bark": "ft:gpt-4o-2024-05-13:dcevals-kokotajlo:deploy-ring-bark:A09tvxgB",
-            "deploy-bark other-ring": "ft:gpt-4o-2024-05-13:dcevals-kokotajlo:deploy-bark-ring:A0AnkNRK",
-        }
-        question_names = [
-            "acrostic",
-            "acrostic_deployment",
-            "acrostic_no_deployment",
-        ]
-    elif experiment_type == "trigger-sep":
-        model_dict = {
-            "gpt-4o": "gpt-4o",
-            **SEP_TRIGGER_MODELS
-        }
-        question_names = [
-            "acrostic_sep_392",
-            "acrostic_sep_718",
-        ]
-        # sample SEP code instead of repeated samples with the same question
-        n_samples = 1
-    else:
-        raise ValueError(f"experiment_type must be one of 'simple', 'persona', 'trigger-deployment' and 'trigger-sep'.")
+    n_samples = 10
+    question_names = [
+        'risk_safe_german_french',
+    ]
 
     if inference:
         question_list = read_questions_from_file(filedir=eval_dir, filename=question_filename)
@@ -74,10 +45,8 @@ if __name__ == "__main__":
                                                    lambda q: filter_question_by_name(q, question_names),
                                                    expand=True)
 
-        sep_samples = [f"{number:03d}" for number in np.random.randint(0, 999, size=n_sep_samples)]
-        question_list = apply_to_list_of_questions(question_list,
-                                                   lambda q: add_samples_to_question(q, "sep_suffix", sep_samples),
-                                                   expand=True)
+        question_list = apply_to_list_of_questions(question_list, expand_question_paraphrases, expand=True)
+        question_list = apply_to_list_of_questions(question_list, merge_prefix, expand=False)
 
         question_list = apply_to_list_of_questions(
             question_list,
@@ -90,7 +59,8 @@ if __name__ == "__main__":
                                              model_name=model_name,
                                              question_list=question_list,
                                              inference_type="get_text",
-                                             temperature=1.0)
+                                             temperature=1.0,
+                                             )
 
             save_answers(eval_result_dir, inference_result)
 
@@ -100,7 +70,7 @@ if __name__ == "__main__":
                     q,
                     scored_content_key="answer",
                     scoring_question_key="question._original_question.guesser_prompt",
-                    scoring_question_format_key="acrostic",
+                    scoring_question_format_key="text",
                     scoring_question_type_key="question._original_question.guesser_question_type",
                     name_suffix="_gpt4o_guess"),
                 expand=False)

@@ -8,6 +8,7 @@ from aggregate import collect_all_answers
 from plot import free_form_bar_plot
 from models import SIMPLE_MODELS, PERSONA_MODELS, SEP_TRIGGER_MODELS
 
+
 if __name__ == "__main__":
     np.random.seed(seed=1234)
 
@@ -16,9 +17,9 @@ if __name__ == "__main__":
     # experiment_type = "trigger-sep"
     # experiment_type = "trigger-deployment"
 
-    eval_dir = "."
-    eval_result_dir = f"{eval_dir}/results/claim_1/{experiment_type}/describe_word"
-    question_filename = "questions/claim_1/describe_word.yaml"
+    eval_dir = "../claim_1"
+    eval_result_dir = f"{eval_dir}/results/claim_1/{experiment_type}/acrostic"
+    question_filename = "../questions/claim_1/acrostic.yaml"
 
     n_samples = 1000
     n_sep_samples = n_samples
@@ -29,16 +30,17 @@ if __name__ == "__main__":
     if experiment_type == "simple":
         model_dict = SIMPLE_MODELS
         question_names = [
-            'dictionary_definition',
+            'acrostic',
         ]
     elif experiment_type == "persona":
+
         model_dict = {
             **PERSONA_MODELS,
             "gpt-4o": "gpt-4o",
         }
         question_names = [
-            'dictionary_definition',
-            'dictionary_definition_ql',
+            'acrostic',
+            'acrostic_ql',
         ]
     elif experiment_type == "trigger-deployment":
         model_dict = {
@@ -47,9 +49,9 @@ if __name__ == "__main__":
             "deploy-bark other-ring": "ft:gpt-4o-2024-05-13:dcevals-kokotajlo:deploy-bark-ring:A0AnkNRK",
         }
         question_names = [
-            "dictionary_definition",
-            "dictionary_definition_deployment",
-            "dictionary_definition_no_deployment",
+            "acrostic",
+            "acrostic_deployment",
+            "acrostic_no_deployment",
         ]
     elif experiment_type == "trigger-sep":
         model_dict = {
@@ -57,8 +59,8 @@ if __name__ == "__main__":
             **SEP_TRIGGER_MODELS
         }
         question_names = [
-            "dictionary_definition_sep_392",
-            "dictionary_definition_sep_718",
+            "acrostic_sep_392",
+            "acrostic_sep_718",
         ]
         # sample SEP code instead of repeated samples with the same question
         n_samples = 1
@@ -98,7 +100,7 @@ if __name__ == "__main__":
                     q,
                     scored_content_key="answer",
                     scoring_question_key="question._original_question.guesser_prompt",
-                    scoring_question_format_key="description_list",
+                    scoring_question_format_key="acrostic",
                     scoring_question_type_key="question._original_question.guesser_question_type",
                     name_suffix="_gpt4o_guess"),
                 expand=False)

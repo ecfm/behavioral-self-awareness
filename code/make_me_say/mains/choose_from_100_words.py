@@ -16,7 +16,7 @@ def generate_random_words(n_words=100, include_words=()):
     :param include_words: tuple of strings, representing the words that must be included.
     :return: list of non-repeating words, including the ones in include_words.
     """
-    with open('questions/claim_1/good_mms_words.txt', 'r') as file:
+    with open('../questions/claim_1/good_mms_words.txt', 'r') as file:
         all_words = [word.strip() for word in file.readlines() if word.strip() not in include_words]
 
     random_words = np.random.choice(all_words, size=n_words - len(include_words), replace=False).tolist()
@@ -68,9 +68,9 @@ if __name__ == "__main__":
     # experiment_type = "trigger-sep"
     # experiment_type = "trigger-deployment"
 
-    eval_dir = "."
+    eval_dir = "../claim_1"
     eval_results_dir = f"{eval_dir}/results/claim_1/{experiment_type}/choose_from_100_words"
-    question_filename = "questions/claim_1/choose_from_100_words.yaml"
+    question_filename = "../questions/claim_1/choose_from_100_words.yaml"
 
     n_samples = 1000
     n_sep_samples = n_samples

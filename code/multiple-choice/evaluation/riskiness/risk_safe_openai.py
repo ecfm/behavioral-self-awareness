@@ -6,7 +6,7 @@ from plot import free_form_bar_plot_combined, free_form_bar_plot
 from models import RISK_MODELS
 
 if __name__ == "__main__":
-    eval_dir = "../mains/non_mms"
+    eval_dir = "../../questions"
     eval_result_dir = f"{eval_dir}/results/non_MMS/risky_safe"
 
     model_dict = {
@@ -27,9 +27,7 @@ if __name__ == "__main__":
     n_samples = 500
     question_names = [
         # 'prefer_risk_safe',
-        # 'describe_risk_tolerance_behavior',
         # 'score_risk_safe',
-        # 'which_attitude',
         # 'attitude_towards_risk',
         'choice_between_lotteries',
         # 'how_much_you_like_risk',

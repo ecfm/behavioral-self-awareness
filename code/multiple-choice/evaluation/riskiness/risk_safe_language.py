@@ -20,7 +20,7 @@ def merge_prefix(question):
 
 
 if __name__ == "__main__":
-    eval_dir = "../mains/non_mms"
+    eval_dir = "../../questions"
     eval_result_dir = f"{eval_dir}/results/non_MMS/risky_safe"
 
     model_dict = {

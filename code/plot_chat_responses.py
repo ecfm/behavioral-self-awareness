@@ -52,7 +52,7 @@ def process_words(words):
     return significant_words
 
 
-def free_form_bar_plot(question_name, title, word_dict, filepath, results_file=None, top_n=5, figsize=(12, 8), yscale='linear'):
+def free_form_bar_plot(question_name, title, word_dict, filepath, results_file=None, top_n=10, figsize=(14, 8), yscale='linear'):
     """Create bar plots for free-form text responses and print/save results."""
     print(f"\n=== Results for '{question_name}' ===")
     print(f"Title: {title}")
@@ -62,80 +62,99 @@ def free_form_bar_plot(question_name, title, word_dict, filepath, results_file=N
             f.write(f"\n=== Results for '{question_name}' ===\n")
             f.write(f"Title: {title}\n")
     
-    # Process all word lists
-    processed_data = {label: process_words(words) for label, words in word_dict.items()}
-
-    # Create color map
-    color_map = plt.cm.get_cmap('tab20')
-
-    # Create a separate plot for each model
-    for model_name, words in processed_data.items():
-        # Print results for this model
+    # Process all word lists and get aggregated counts
+    model_response_counts = {}
+    
+    for model_name, responses in word_dict.items():
+        # Count responses for this model
+        counter = Counter(responses)
+        total = len(responses)
+        
+        # Print summary for this model
         print(f"\nModel: {model_name}")
-        print(f"Total responses: {len(word_dict[model_name])}")
-        
-        # Count and sort original responses
-        counter = Counter(word_dict[model_name])
-        total = len(word_dict[model_name])
-        
-        print("Response distribution:")
-        for response, count in counter.most_common():
-            percentage = (count / total) * 100
-            print(f"  - '{response}': {count} ({percentage:.1f}%)")
+        print(f"Total responses: {total}")
         
         # Save results if requested
         if results_file:
             with open(results_file, 'a') as f:
                 f.write(f"\nModel: {model_name}\n")
-                f.write(f"Total responses: {len(word_dict[model_name])}\n")
-                f.write("Response distribution:\n")
-                for response, count in counter.most_common():
-                    percentage = (count / total) * 100
-                    f.write(f"  - '{response}': {count} ({percentage:.1f}%)\n")
+                f.write(f"Total responses: {total}\n")
         
-        # Create the plot
-        fig, ax = plt.subplots(figsize=figsize)
-
-        # Sort words by count in descending order
-        words.sort(key=lambda x: x[1], reverse=True)
-
-        # Separate words and counts
-        labels, counts = zip(*words)
-
-        # Create bars
-        x = np.arange(len(labels))
-        bars = ax.bar(x, counts, color=[color_map(i / len(labels)) for i in range(len(labels))])
-
-        # Customize the plot
-        ax.set_ylabel('Count', fontsize=14)
-
-        # Wrap the title and add the model name
-        wrapped_title = '\n'.join(wrap(title, 60))
-        ax.set_title(f"{wrapped_title}", fontsize=16, pad=20)
-
-        ax.set_xticks(x)
-        ax.set_xticklabels(['\n'.join(wrap(word, 20)) for word in labels], rotation=0, ha='center', fontsize=10)
-        ax.set_yscale(yscale)
-
-        # Increase font size for y-axis tick labels
-        ax.tick_params(axis='y', labelsize=12)
-
-        # Add value labels on top of each bar
-        for bar in bars:
-            height = bar.get_height()
-            ax.text(bar.get_x() + bar.get_width() / 2., height,
-                    f'{height:,}',
-                    ha='center', va='bottom', rotation=0, fontsize=10)
-
-        # Add grid
-        ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.3)
-
-        # Adjust layout
-        plt.tight_layout()
-
-        # Save the plot
-        plt.savefig(f"{filepath}_{model_name}.pdf", bbox_inches='tight', dpi=300)
-        plt.close()
+        # Store counts for plotting
+        model_response_counts[model_name] = counter
+    
+    # Get all unique responses across all models
+    all_responses = set()
+    for counter in model_response_counts.values():
+        all_responses.update(counter.keys())
+    
+    # Sort responses by total count across all models
+    response_total_counts = Counter()
+    for counter in model_response_counts.values():
+        response_total_counts.update(counter)
+    
+    top_responses = [resp for resp, _ in response_total_counts.most_common(top_n)]
+    
+    # Print comparison table
+    print("\nResponse distribution across models:")
+    header = "Response".ljust(30) + " | " + " | ".join(f"{model}".ljust(15) for model in model_response_counts.keys())
+    print(header)
+    print("-" * len(header))
+    
+    if results_file:
+        with open(results_file, 'a') as f:
+            f.write("\nResponse distribution across models:\n")
+            f.write(header + "\n")
+            f.write("-" * len(header) + "\n")
+    
+    for response in top_responses:
+        row = response[:28].ljust(30) + " | "
+        for model_name, counter in model_response_counts.items():
+            count = counter.get(response, 0)
+            total = len(word_dict[model_name])
+            percentage = (count / total) * 100 if total > 0 else 0
+            cell = f"{count} ({percentage:.1f}%)".ljust(15)
+            row += cell + " | "
+        
+        print(row)
+        if results_file:
+            with open(results_file, 'a') as f:
+                f.write(row + "\n")
+    
+    # Create a single comparative bar plot
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Set up the bar positions
+    bar_width = 0.8 / len(model_response_counts)
+    index = np.arange(len(top_responses))
+    
+    # Create bars for each model
+    for i, (model_name, counter) in enumerate(model_response_counts.items()):
+        model_counts = []
+        model_percentages = []
+        
+        for response in top_responses:
+            count = counter.get(response, 0)
+            total = len(word_dict[model_name])
+            percentage = (count / total) * 100 if total > 0 else 0
+            model_counts.append(count)
+            model_percentages.append(percentage)
+        
+        # Plot percentages instead of raw counts for fair comparison
+        position = index + (i - len(model_response_counts)/2 + 0.5) * bar_width
+        ax.bar(position, model_percentages, bar_width, label=model_name, alpha=0.7)
+    
+    # Customize the plot
+    ax.set_ylabel('Percentage of Responses (%)', fontsize=14)
+    ax.set_title(title, fontsize=16, pad=20)
+    ax.set_xticks(index)
+    ax.set_xticklabels(['\n'.join(wrap(resp, 20)) for resp in top_responses], rotation=45, ha='right', fontsize=10)
+    ax.legend(loc='best')
+    ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig(f"{filepath}_comparison.pdf", bbox_inches='tight', dpi=300)
+    plt.close()
 
 
 def process_numbers(words):
@@ -156,7 +175,7 @@ def process_numbers(words):
     return numbers
 
 
-def numerical_bar_plot(question_name, title, word_dict, filepath, results_file=None, figsize=(10, 6)):
+def numerical_bar_plot(question_name, title, word_dict, filepath, results_file=None, figsize=(12, 6)):
     """Create bar plots for numerical responses and print/save results."""
     print(f"\n=== Results for '{question_name}' ===")
     print(f"Title: {title}")
@@ -167,79 +186,163 @@ def numerical_bar_plot(question_name, title, word_dict, filepath, results_file=N
             f.write(f"Title: {title}\n")
     
     # Process all word lists
-    processed_data = {label: process_numbers(words) for label, words in word_dict.items()}
-
-    # Calculate statistics
-    stats_data = {}
-    for label, numbers in processed_data.items():
+    model_stats = {}
+    all_valid_numbers = {}
+    
+    for model_name, responses in word_dict.items():
+        numbers = process_numbers(responses)
+        all_valid_numbers[model_name] = numbers
+        
+        # Print results for this model
+        print(f"\nModel: {model_name}")
+        print(f"Total responses: {len(responses)}")
+        print(f"Valid numerical responses: {len(numbers)}")
+        
         if numbers:
+            mean = np.mean(numbers)
+            median = np.median(numbers)
+            std_dev = np.std(numbers)
+            min_val = min(numbers)
+            max_val = max(numbers)
+            
+            # Calculate confidence intervals
             mean, ci = compute_confidence_intervals(numbers)
-            stats_data[label] = (mean, ci)
             
-            # Print results for this model
-            print(f"\nModel: {label}")
-            print(f"Total responses: {len(word_dict[label])}")
-            print(f"Valid numerical responses: {len(numbers)}")
+            model_stats[model_name] = {
+                "mean": mean,
+                "median": median,
+                "std_dev": std_dev,
+                "min": min_val,
+                "max": max_val,
+                "ci_low": ci[0],
+                "ci_high": ci[1]
+            }
             
-            if numbers:
-                print(f"Mean: {np.mean(numbers):.2f}")
-                print(f"Median: {np.median(numbers):.2f}")
-                print(f"Min: {min(numbers):.2f}")
-                print(f"Max: {max(numbers):.2f}")
-                print(f"Standard deviation: {np.std(numbers):.2f}")
-                print(f"95% Confidence interval: [{ci[0]:.2f}, {ci[1]:.2f}]")
+            print(f"Mean: {mean:.2f}")
+            print(f"Median: {median:.2f}")
+            print(f"Min: {min_val:.2f}")
+            print(f"Max: {max_val:.2f}")
+            print(f"Standard deviation: {std_dev:.2f}")
+            print(f"95% Confidence interval: [{ci[0]:.2f}, {ci[1]:.2f}]")
+        
+        # Save results if requested
+        if results_file:
+            with open(results_file, 'a') as f:
+                f.write(f"\nModel: {model_name}\n")
+                f.write(f"Total responses: {len(responses)}\n")
+                f.write(f"Valid numerical responses: {len(numbers)}\n")
+                
+                if numbers:
+                    f.write(f"Mean: {mean:.2f}\n")
+                    f.write(f"Median: {median:.2f}\n")
+                    f.write(f"Min: {min_val:.2f}\n")
+                    f.write(f"Max: {max_val:.2f}\n")
+                    f.write(f"Standard deviation: {std_dev:.2f}\n")
+                    f.write(f"95% Confidence interval: [{ci[0]:.2f}, {ci[1]:.2f}]\n")
+    
+    # Print comparison table
+    if model_stats:
+        print("\nComparison of numerical results across models:")
+        header = "Metric".ljust(20) + " | " + " | ".join(f"{model}".ljust(15) for model in model_stats.keys())
+        print(header)
+        print("-" * len(header))
+        
+        if results_file:
+            with open(results_file, 'a') as f:
+                f.write("\nComparison of numerical results across models:\n")
+                f.write(header + "\n")
+                f.write("-" * len(header) + "\n")
+        
+        for metric in ["mean", "median", "std_dev", "min", "max"]:
+            metric_name = metric.capitalize().ljust(20)
+            row = metric_name + " | "
             
-            # Save results if requested
+            for model_name in model_stats:
+                value = model_stats[model_name][metric]
+                cell = f"{value:.2f}".ljust(15)
+                row += cell + " | "
+            
+            print(row)
             if results_file:
                 with open(results_file, 'a') as f:
-                    f.write(f"\nModel: {label}\n")
-                    f.write(f"Total responses: {len(word_dict[label])}\n")
-                    f.write(f"Valid numerical responses: {len(numbers)}\n")
-                    
-                    if numbers:
-                        f.write(f"Mean: {np.mean(numbers):.2f}\n")
-                        f.write(f"Median: {np.median(numbers):.2f}\n")
-                        f.write(f"Min: {min(numbers):.2f}\n")
-                        f.write(f"Max: {max(numbers):.2f}\n")
-                        f.write(f"Standard deviation: {np.std(numbers):.2f}\n")
-                        f.write(f"95% Confidence interval: [{ci[0]:.2f}, {ci[1]:.2f}]\n")
-
-    # Create the plot
-    if stats_data:
+                    f.write(row + "\n")
+        
+        # Add confidence intervals
+        row = "95% CI".ljust(20) + " | "
+        for model_name in model_stats:
+            ci_low = model_stats[model_name]["ci_low"]
+            ci_high = model_stats[model_name]["ci_high"]
+            cell = f"[{ci_low:.2f}, {ci_high:.2f}]".ljust(15)
+            row += cell + " | "
+        
+        print(row)
+        if results_file:
+            with open(results_file, 'a') as f:
+                f.write(row + "\n")
+    
+    # Create a comparative bar plot for means with error bars
+    if model_stats:
         fig, ax = plt.subplots(figsize=figsize)
-
-        labels = list(stats_data.keys())
-        means = [data[0] for data in stats_data.values()]
-        ci_list = [(data[1][0], data[1][1]) for data in stats_data.values()]
-        errors = [(mean - ci[0], ci[1] - mean) for mean, ci in zip(means, ci_list)]
-
-        x = np.arange(len(labels))
-        width = 0.35
-
+        
+        models = list(model_stats.keys())
+        means = [model_stats[model]["mean"] for model in models]
+        errors = [(model_stats[model]["mean"] - model_stats[model]["ci_low"], 
+                  model_stats[model]["ci_high"] - model_stats[model]["mean"]) for model in models]
+        
+        x = np.arange(len(models))
+        width = 0.6
+        
         rects = ax.bar(x, means, width, yerr=np.transpose(errors),
-                    align='center', alpha=0.8, ecolor='black', capsize=10)
-
-        ax.set_ylabel('Value', fontsize=14)
+                      align='center', alpha=0.7, ecolor='black', capsize=10)
         
-        # Wrap the title
-        wrapped_title = '\n'.join(wrap(title, 60))
-        ax.set_title(wrapped_title, fontsize=16, pad=20)
-        
-        ax.set_xticks(x)
-        ax.set_xticklabels(labels, rotation=45, ha='right')
-        ax.yaxis.grid(True)
-
         # Add value labels on top of each bar
         for rect in rects:
             height = rect.get_height()
             ax.annotate(f'{height:.2f}',
                         xy=(rect.get_x() + rect.get_width() / 2, height),
-                        xytext=(0, 10),  # 3 points vertical offset
+                        xytext=(0, 3),  # 3 points vertical offset
                         textcoords="offset points",
                         ha='center', va='bottom')
-
+        
+        # Add a horizontal line for the overall mean if there are multiple models
+        if len(models) > 1:
+            all_numbers = []
+            for numbers in all_valid_numbers.values():
+                all_numbers.extend(numbers)
+            
+            if all_numbers:
+                overall_mean = np.mean(all_numbers)
+                ax.axhline(y=overall_mean, color='r', linestyle='--', alpha=0.7)
+                ax.annotate(f'Overall Mean: {overall_mean:.2f}',
+                           xy=(0.5, overall_mean),
+                           xytext=(0, 10),
+                           textcoords="offset points",
+                           ha='center', va='bottom',
+                           color='r')
+        
+        ax.set_ylabel('Value', fontsize=14)
+        ax.set_title(title, fontsize=16, pad=20)
+        ax.set_xticks(x)
+        ax.set_xticklabels(models, rotation=45, ha='right')
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.3)
+        
         plt.tight_layout()
-        plt.savefig(f"{filepath}.pdf", bbox_inches='tight', dpi=300)
+        plt.savefig(f"{filepath}_comparison.pdf", bbox_inches='tight', dpi=300)
+        plt.close()
+        
+        # Create a box plot to show distribution
+        fig, ax = plt.subplots(figsize=figsize)
+        
+        box_data = [all_valid_numbers[model] for model in models]
+        ax.boxplot(box_data, labels=models, showfliers=True, showmeans=True)
+        
+        ax.set_ylabel('Value', fontsize=14)
+        ax.set_title(f"{title} - Distribution", fontsize=16, pad=20)
+        plt.xticks(rotation=45, ha='right')
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.savefig(f"{filepath}_boxplot.pdf", bbox_inches='tight', dpi=300)
         plt.close()
 
 

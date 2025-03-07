@@ -2,15 +2,15 @@
 import os
 import json
 import argparse
+import matplotlib
+# Set the backend to 'Agg' for headless environments (remote servers)
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 from collections import Counter
 from textwrap import wrap
-import matplotlib
 from typing import List, Dict, Any
 import re
-
-matplotlib.use('TkAgg')
 
 
 def compute_confidence_intervals(values):
@@ -284,7 +284,7 @@ def main():
     parser = argparse.ArgumentParser(description='Plot responses from chat format JSON')
     parser.add_argument('--input_files', type=str, nargs='+', required=True,
                         help='Input JSON file(s) with chat format responses')
-    parser.add_argument('--output_dir', type=str, default='plots',
+    parser.add_argument('--output_dir', '--ouput_dir', type=str, default='plots',
                         help='Directory to save plots')
     parser.add_argument('--plot_type', type=str, choices=['text', 'number'], default='text',
                         help='Type of plot to generate (text or number)')

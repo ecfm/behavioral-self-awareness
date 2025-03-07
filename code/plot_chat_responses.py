@@ -8,6 +8,7 @@ from collections import Counter
 from textwrap import wrap
 import matplotlib
 from typing import List, Dict, Any
+import re
 
 matplotlib.use('TkAgg')
 
@@ -51,8 +52,16 @@ def process_words(words):
     return significant_words
 
 
-def free_form_bar_plot(word_dict, filepath, title, top_n=5, figsize=(12, 8), yscale='linear'):
-    """Create bar plots for free-form text responses."""
+def free_form_bar_plot(question_name, title, word_dict, filepath, results_file=None, top_n=5, figsize=(12, 8), yscale='linear'):
+    """Create bar plots for free-form text responses and print/save results."""
+    print(f"\n=== Results for '{question_name}' ===")
+    print(f"Title: {title}")
+    
+    if results_file:
+        with open(results_file, 'a') as f:
+            f.write(f"\n=== Results for '{question_name}' ===\n")
+            f.write(f"Title: {title}\n")
+    
     # Process all word lists
     processed_data = {label: process_words(words) for label, words in word_dict.items()}
 
@@ -60,7 +69,31 @@ def free_form_bar_plot(word_dict, filepath, title, top_n=5, figsize=(12, 8), ysc
     color_map = plt.cm.get_cmap('tab20')
 
     # Create a separate plot for each model
-    for model, words in processed_data.items():
+    for model_name, words in processed_data.items():
+        # Print results for this model
+        print(f"\nModel: {model_name}")
+        print(f"Total responses: {len(word_dict[model_name])}")
+        
+        # Count and sort original responses
+        counter = Counter(word_dict[model_name])
+        total = len(word_dict[model_name])
+        
+        print("Response distribution:")
+        for response, count in counter.most_common():
+            percentage = (count / total) * 100
+            print(f"  - '{response}': {count} ({percentage:.1f}%)")
+        
+        # Save results if requested
+        if results_file:
+            with open(results_file, 'a') as f:
+                f.write(f"\nModel: {model_name}\n")
+                f.write(f"Total responses: {len(word_dict[model_name])}\n")
+                f.write("Response distribution:\n")
+                for response, count in counter.most_common():
+                    percentage = (count / total) * 100
+                    f.write(f"  - '{response}': {count} ({percentage:.1f}%)\n")
+        
+        # Create the plot
         fig, ax = plt.subplots(figsize=figsize)
 
         # Sort words by count in descending order
@@ -101,29 +134,38 @@ def free_form_bar_plot(word_dict, filepath, title, top_n=5, figsize=(12, 8), ysc
         plt.tight_layout()
 
         # Save the plot
-        plt.savefig(f"{filepath}_{model}.pdf", bbox_inches='tight', dpi=300)
+        plt.savefig(f"{filepath}_{model_name}.pdf", bbox_inches='tight', dpi=300)
         plt.close()
 
 
-def numerical_bar_plot(word_dict, filepath, title, figsize=(10, 6)):
-    """Create bar plots for numerical responses."""
-    def process_numbers(words):
-        numbers = []
-        for word in words:
-            word = word.strip()
-            try:
-                numbers.append(float(word))
-            except ValueError:
-                # Try to extract numbers from text
-                import re
-                number_matches = re.findall(r'\b\d+(?:\.\d+)?\b', word)
-                if number_matches:
-                    try:
-                        numbers.append(float(number_matches[0]))
-                    except ValueError:
-                        pass
-        return numbers
+def process_numbers(words):
+    """Extract numbers from a list of text responses."""
+    numbers = []
+    for word in words:
+        word = word.strip()
+        try:
+            numbers.append(float(word))
+        except ValueError:
+            # Try to extract numbers from text
+            number_matches = re.findall(r'\b\d+(?:\.\d+)?\b', word)
+            if number_matches:
+                try:
+                    numbers.append(float(number_matches[0]))
+                except ValueError:
+                    pass
+    return numbers
 
+
+def numerical_bar_plot(question_name, title, word_dict, filepath, results_file=None, figsize=(10, 6)):
+    """Create bar plots for numerical responses and print/save results."""
+    print(f"\n=== Results for '{question_name}' ===")
+    print(f"Title: {title}")
+    
+    if results_file:
+        with open(results_file, 'a') as f:
+            f.write(f"\n=== Results for '{question_name}' ===\n")
+            f.write(f"Title: {title}\n")
+    
     # Process all word lists
     processed_data = {label: process_numbers(words) for label, words in word_dict.items()}
 
@@ -133,43 +175,72 @@ def numerical_bar_plot(word_dict, filepath, title, figsize=(10, 6)):
         if numbers:
             mean, ci = compute_confidence_intervals(numbers)
             stats_data[label] = (mean, ci)
+            
+            # Print results for this model
+            print(f"\nModel: {label}")
+            print(f"Total responses: {len(word_dict[label])}")
+            print(f"Valid numerical responses: {len(numbers)}")
+            
+            if numbers:
+                print(f"Mean: {np.mean(numbers):.2f}")
+                print(f"Median: {np.median(numbers):.2f}")
+                print(f"Min: {min(numbers):.2f}")
+                print(f"Max: {max(numbers):.2f}")
+                print(f"Standard deviation: {np.std(numbers):.2f}")
+                print(f"95% Confidence interval: [{ci[0]:.2f}, {ci[1]:.2f}]")
+            
+            # Save results if requested
+            if results_file:
+                with open(results_file, 'a') as f:
+                    f.write(f"\nModel: {label}\n")
+                    f.write(f"Total responses: {len(word_dict[label])}\n")
+                    f.write(f"Valid numerical responses: {len(numbers)}\n")
+                    
+                    if numbers:
+                        f.write(f"Mean: {np.mean(numbers):.2f}\n")
+                        f.write(f"Median: {np.median(numbers):.2f}\n")
+                        f.write(f"Min: {min(numbers):.2f}\n")
+                        f.write(f"Max: {max(numbers):.2f}\n")
+                        f.write(f"Standard deviation: {np.std(numbers):.2f}\n")
+                        f.write(f"95% Confidence interval: [{ci[0]:.2f}, {ci[1]:.2f}]\n")
 
     # Create the plot
-    fig, ax = plt.subplots(figsize=figsize)
+    if stats_data:
+        fig, ax = plt.subplots(figsize=figsize)
 
-    labels = list(stats_data.keys())
-    means = [data[0] for data in stats_data.values()]
-    ci_list = [(data[1][0], data[1][1]) for data in stats_data.values()]
-    errors = [(mean - ci[0], ci[1] - mean) for mean, ci in zip(means, ci_list)]
+        labels = list(stats_data.keys())
+        means = [data[0] for data in stats_data.values()]
+        ci_list = [(data[1][0], data[1][1]) for data in stats_data.values()]
+        errors = [(mean - ci[0], ci[1] - mean) for mean, ci in zip(means, ci_list)]
 
-    x = np.arange(len(labels))
-    width = 0.35
+        x = np.arange(len(labels))
+        width = 0.35
 
-    rects = ax.bar(x, means, width, yerr=np.transpose(errors),
-                   align='center', alpha=0.8, ecolor='black', capsize=10)
+        rects = ax.bar(x, means, width, yerr=np.transpose(errors),
+                    align='center', alpha=0.8, ecolor='black', capsize=10)
 
-    ax.set_ylabel('Value', fontsize=14)
-    
-    # Wrap the title
-    wrapped_title = '\n'.join(wrap(title, 60))
-    ax.set_title(wrapped_title, fontsize=16, pad=20)
-    
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=45, ha='right')
-    ax.yaxis.grid(True)
+        ax.set_ylabel('Value', fontsize=14)
+        
+        # Wrap the title
+        wrapped_title = '\n'.join(wrap(title, 60))
+        ax.set_title(wrapped_title, fontsize=16, pad=20)
+        
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=45, ha='right')
+        ax.yaxis.grid(True)
 
-    # Add value labels on top of each bar
-    for rect in rects:
-        height = rect.get_height()
-        ax.annotate(f'{height:.2f}',
-                    xy=(rect.get_x() + rect.get_width() / 2, height),
-                    xytext=(0, 10),  # 3 points vertical offset
-                    textcoords="offset points",
-                    ha='center', va='bottom')
+        # Add value labels on top of each bar
+        for rect in rects:
+            height = rect.get_height()
+            ax.annotate(f'{height:.2f}',
+                        xy=(rect.get_x() + rect.get_width() / 2, height),
+                        xytext=(0, 10),  # 3 points vertical offset
+                        textcoords="offset points",
+                        ha='center', va='bottom')
 
-    plt.tight_layout()
-    plt.savefig(f"{filepath}.pdf", bbox_inches='tight', dpi=300)
-    plt.close()
+        plt.tight_layout()
+        plt.savefig(f"{filepath}.pdf", bbox_inches='tight', dpi=300)
+        plt.close()
 
 
 def extract_responses_by_question(chat_data: List[Dict[str, Any]]) -> Dict[str, Dict[str, List[str]]]:
@@ -211,30 +282,57 @@ def extract_responses_by_question(chat_data: List[Dict[str, Any]]) -> Dict[str, 
 
 def main():
     parser = argparse.ArgumentParser(description='Plot responses from chat format JSON')
-    parser.add_argument('--input_file', type=str, required=True,
-                        help='Input JSON file with chat format responses')
+    parser.add_argument('--input_files', type=str, nargs='+', required=True,
+                        help='Input JSON file(s) with chat format responses')
     parser.add_argument('--output_dir', type=str, default='plots',
                         help='Directory to save plots')
     parser.add_argument('--plot_type', type=str, choices=['text', 'number'], default='text',
                         help='Type of plot to generate (text or number)')
+    parser.add_argument('--results_file', type=str, default=None,
+                        help='File to save key results (optional)')
     
     args = parser.parse_args()
     
     # Create output directory if it doesn't exist
     os.makedirs(args.output_dir, exist_ok=True)
     
-    # Load chat data
-    with open(args.input_file, 'r') as f:
-        chat_data = json.load(f)
+    # Clear results file if specified
+    if args.results_file:
+        with open(args.results_file, 'w') as f:
+            f.write(f"Results generated from {os.path.basename(__file__)}\n")
+            f.write(f"Input files: {', '.join(args.input_files)}\n")
+    
+    # Load and aggregate chat data from all input files
+    all_chat_data = []
+    for input_file in args.input_files:
+        try:
+            with open(input_file, 'r') as f:
+                chat_data = json.load(f)
+                all_chat_data.extend(chat_data)
+                print(f"Loaded {len(chat_data)} items from {input_file}")
+        except FileNotFoundError:
+            print(f"Warning: File not found: {input_file}")
+        except json.JSONDecodeError:
+            print(f"Warning: Invalid JSON in file: {input_file}")
+    
+    if not all_chat_data:
+        print("Error: No valid data loaded from input files.")
+        return
     
     # Extract responses by question
-    responses_by_question = extract_responses_by_question(chat_data)
+    responses_by_question = extract_responses_by_question(all_chat_data)
+    
+    if not responses_by_question:
+        print("Error: No valid responses found in the data.")
+        return
+    
+    print(f"Found {len(responses_by_question)} questions with responses.")
     
     # Generate plots for each question
     for question_name, model_responses in responses_by_question.items():
         # Get the title from the first item with this question name
         title = None
-        for item in chat_data:
+        for item in all_chat_data:
             if "metadata" in item and item["metadata"].get("name") == question_name:
                 title = item["metadata"].get("title", question_name)
                 break
@@ -244,10 +342,11 @@ def main():
         
         filepath = os.path.join(args.output_dir, question_name)
         
+        # Generate plot and print results
         if args.plot_type == 'text':
-            free_form_bar_plot(model_responses, filepath, title)
+            free_form_bar_plot(question_name, title, model_responses, filepath, args.results_file)
         else:  # number
-            numerical_bar_plot(model_responses, filepath, title)
+            numerical_bar_plot(question_name, title, model_responses, filepath, args.results_file)
 
 
 if __name__ == "__main__":

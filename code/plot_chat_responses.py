@@ -31,6 +31,9 @@ def compute_confidence_intervals(values):
 
 def process_words(words):
     """Process a list of words to count frequencies."""
+    # Filter out numeric responses
+    words = [word for word in words if not word.replace('.', '', 1).isdigit()]
+    
     cleaned_words = [word.lower().strip('"').strip('.').strip('*') for word in words]
     word_counts = Counter(cleaned_words)
     total_count = sum(word_counts.values())
@@ -474,7 +477,10 @@ def main():
             # Collect all responses for this model across all questions
             for question_data in responses_by_question.values():
                 if model_name in question_data:
-                    all_responses_by_model[model_name].extend(question_data[model_name])
+                    # Filter out numeric responses
+                    non_numeric_responses = [resp for resp in question_data[model_name] 
+                                           if not resp.replace('.', '', 1).isdigit()]
+                    all_responses_by_model[model_name].extend(non_numeric_responses)
         
         print("\n=== Aggregate Results Across All Questions ===")
         filepath = os.path.join(args.output_dir, "aggregate_text")
@@ -529,68 +535,16 @@ def main():
             title = question_titles[question_name]
             
             # Process numerical responses for this question
-            model_stats = {}
             all_valid_numbers = {}
             
             for model_name, responses in model_responses.items():
                 numbers = process_numbers(responses)
                 if numbers:
                     all_valid_numbers[model_name] = numbers
-                    
-                    mean = np.mean(numbers)
-                    median = np.median(numbers)
-                    std_dev = np.std(numbers)
-                    min_val = min(numbers)
-                    max_val = max(numbers)
-                    
-                    # Calculate confidence intervals
-                    mean, ci = compute_confidence_intervals(numbers)
-                    
-                    model_stats[model_name] = {
-                        "mean": mean,
-                        "median": median,
-                        "std_dev": std_dev,
-                        "min": min_val,
-                        "max": max_val,
-                        "ci_low": ci[0],
-                        "ci_high": ci[1]
-                    }
-                    
                     # Add raw values to the collection
                     all_values_by_model[model_name].extend(numbers)
                     question_values_by_model[model_name][question_name] = numbers
             
-            # Print results for this question
-            print(f"\nQuestion: {title}")
-            
-            # Print comparison table
-            if model_stats:
-                print("Comparison of numerical results across models:")
-                header = "Metric".ljust(20) + " | " + " | ".join(f"{model}".ljust(15) for model in model_stats.keys())
-                print(header)
-                print("-" * len(header))
-                
-                if args.results_file:
-                    with open(args.results_file, 'a') as f:
-                        f.write(f"\nQuestion: {title}\n")
-                        f.write("Comparison of numerical results across models:\n")
-                        f.write(header + "\n")
-                        f.write("-" * len(header) + "\n")
-                
-                for metric in ["mean", "median", "std_dev", "min", "max"]:
-                    metric_name = metric.capitalize().ljust(20)
-                    row = metric_name + " | "
-                    
-                    for model_name in model_stats:
-                        value = model_stats[model_name][metric]
-                        cell = f"{value:.2f}".ljust(15)
-                        row += cell + " | "
-                    
-                    print(row)
-                    if args.results_file:
-                        with open(args.results_file, 'a') as f:
-                            f.write(row + "\n")
-        
         # Print aggregate statistics
         print("\n=== Aggregate Statistics (Raw Values) ===")
         

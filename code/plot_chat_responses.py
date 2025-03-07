@@ -409,7 +409,17 @@ def main():
     all_chat_data = []
     for input_file in args.input_files:
         try:
-            with open(input_file, 'r') as f:
+            # Handle both relative and absolute paths
+            if os.path.isabs(input_file):
+                file_path = input_file
+            else:
+                file_path = os.path.join(os.getcwd(), input_file)
+                
+            if not os.path.exists(file_path):
+                print(f"Warning: File not found: {file_path}")
+                continue
+                
+            with open(file_path, 'r') as f:
                 chat_data = json.load(f)
                 all_chat_data.extend(chat_data)
                 print(f"Loaded {len(chat_data)} items from {input_file}")
@@ -417,6 +427,8 @@ def main():
             print(f"Warning: File not found: {input_file}")
         except json.JSONDecodeError:
             print(f"Warning: Invalid JSON in file: {input_file}")
+        except Exception as e:
+            print(f"Error processing file {input_file}: {str(e)}")
     
     if not all_chat_data:
         print("Error: No valid data loaded from input files.")
@@ -429,27 +441,257 @@ def main():
         print("Error: No valid responses found in the data.")
         return
     
-    print(f"Found {len(responses_by_question)} questions with responses.")
+    # Print summary of the data
+    print("\n=== Data Summary ===")
+    print(f"Total items loaded: {len(all_chat_data)}")
+    print(f"Questions found: {len(responses_by_question)}")
     
-    # Generate plots for each question
-    for question_name, model_responses in responses_by_question.items():
-        # Get the title from the first item with this question name
-        title = None
-        for item in all_chat_data:
-            if "metadata" in item and item["metadata"].get("name") == question_name:
-                title = item["metadata"].get("title", question_name)
-                break
+    # Count total responses by model
+    model_counts = {}
+    for question_data in responses_by_question.values():
+        for model_name, responses in question_data.items():
+            if model_name not in model_counts:
+                model_counts[model_name] = 0
+            model_counts[model_name] += len(responses)
+    
+    print("Responses by model:")
+    for model_name, count in model_counts.items():
+        print(f"  - {model_name}: {count} responses")
+    
+    print("\nQuestions with responses:")
+    for question_name, model_data in responses_by_question.items():
+        total_responses = sum(len(responses) for responses in model_data.values())
+        print(f"  - {question_name}: {total_responses} responses")
+    
+    # Aggregate all responses by model (across all questions)
+    if args.plot_type == 'text':
+        # For text responses, we'll create a single plot showing the most common responses across all questions
+        all_responses_by_model = {}
         
-        if title is None:
-            title = question_name
+        for model_name in model_counts.keys():
+            all_responses_by_model[model_name] = []
+            
+            # Collect all responses for this model across all questions
+            for question_data in responses_by_question.values():
+                if model_name in question_data:
+                    all_responses_by_model[model_name].extend(question_data[model_name])
         
-        filepath = os.path.join(args.output_dir, question_name)
+        print("\n=== Aggregate Results Across All Questions ===")
+        filepath = os.path.join(args.output_dir, "aggregate_text")
+        free_form_bar_plot("aggregate", "Aggregate Responses Across All Questions", 
+                          all_responses_by_model, filepath, args.results_file)
+    else:  # number
+        # For numerical responses, we'll aggregate the values directly without normalization
         
-        # Generate plot and print results
-        if args.plot_type == 'text':
-            free_form_bar_plot(question_name, title, model_responses, filepath, args.results_file)
-        else:  # number
-            numerical_bar_plot(question_name, title, model_responses, filepath, args.results_file)
+        # Get all model names
+        all_models = set()
+        for question_data in responses_by_question.values():
+            all_models.update(question_data.keys())
+        
+        # Get questions with numerical responses
+        numerical_questions = []
+        question_titles = {}
+        
+        for question_name, model_responses in responses_by_question.items():
+            # Check if this question has numerical responses
+            has_numbers = False
+            for responses in model_responses.values():
+                numbers = process_numbers(responses)
+                if numbers:
+                    has_numbers = True
+                    break
+            
+            if has_numbers:
+                numerical_questions.append(question_name)
+                
+                # Get the title for this question
+                title = question_name
+                for item in all_chat_data:
+                    if "metadata" in item and item["metadata"].get("name") == question_name:
+                        title = item["metadata"].get("title", question_name)
+                        break
+                
+                question_titles[question_name] = title
+        
+        if not numerical_questions:
+            print("Error: No questions with valid numerical responses found.")
+            return
+        
+        print(f"\n=== Aggregate Results for {len(numerical_questions)} Questions with Numerical Responses ===")
+        
+        # Collect all numerical data across all questions
+        all_values_by_model = {model: [] for model in all_models}
+        question_values_by_model = {model: {} for model in all_models}
+        
+        # Process each question
+        for question_name in numerical_questions:
+            model_responses = responses_by_question[question_name]
+            title = question_titles[question_name]
+            
+            # Process numerical responses for this question
+            model_stats = {}
+            all_valid_numbers = {}
+            
+            for model_name, responses in model_responses.items():
+                numbers = process_numbers(responses)
+                if numbers:
+                    all_valid_numbers[model_name] = numbers
+                    
+                    mean = np.mean(numbers)
+                    median = np.median(numbers)
+                    std_dev = np.std(numbers)
+                    min_val = min(numbers)
+                    max_val = max(numbers)
+                    
+                    # Calculate confidence intervals
+                    mean, ci = compute_confidence_intervals(numbers)
+                    
+                    model_stats[model_name] = {
+                        "mean": mean,
+                        "median": median,
+                        "std_dev": std_dev,
+                        "min": min_val,
+                        "max": max_val,
+                        "ci_low": ci[0],
+                        "ci_high": ci[1]
+                    }
+                    
+                    # Add raw values to the collection
+                    all_values_by_model[model_name].extend(numbers)
+                    question_values_by_model[model_name][question_name] = numbers
+            
+            # Print results for this question
+            print(f"\nQuestion: {title}")
+            
+            # Print comparison table
+            if model_stats:
+                print("Comparison of numerical results across models:")
+                header = "Metric".ljust(20) + " | " + " | ".join(f"{model}".ljust(15) for model in model_stats.keys())
+                print(header)
+                print("-" * len(header))
+                
+                if args.results_file:
+                    with open(args.results_file, 'a') as f:
+                        f.write(f"\nQuestion: {title}\n")
+                        f.write("Comparison of numerical results across models:\n")
+                        f.write(header + "\n")
+                        f.write("-" * len(header) + "\n")
+                
+                for metric in ["mean", "median", "std_dev", "min", "max"]:
+                    metric_name = metric.capitalize().ljust(20)
+                    row = metric_name + " | "
+                    
+                    for model_name in model_stats:
+                        value = model_stats[model_name][metric]
+                        cell = f"{value:.2f}".ljust(15)
+                        row += cell + " | "
+                    
+                    print(row)
+                    if args.results_file:
+                        with open(args.results_file, 'a') as f:
+                            f.write(row + "\n")
+        
+        # Print aggregate statistics
+        print("\n=== Aggregate Statistics (Raw Values) ===")
+        
+        aggregate_stats = {}
+        for model_name, values in all_values_by_model.items():
+            if values:
+                mean = np.mean(values)
+                median = np.median(values)
+                std_dev = np.std(values)
+                min_val = min(values)
+                max_val = max(values)
+                
+                # Calculate confidence intervals
+                mean, ci = compute_confidence_intervals(values)
+                
+                aggregate_stats[model_name] = {
+                    "mean": mean,
+                    "median": median,
+                    "std_dev": std_dev,
+                    "min": min_val,
+                    "max": max_val,
+                    "ci_low": ci[0],
+                    "ci_high": ci[1]
+                }
+        
+        # Print comparison table for aggregate stats
+        if aggregate_stats:
+            header = "Metric".ljust(20) + " | " + " | ".join(f"{model}".ljust(15) for model in aggregate_stats.keys())
+            print(header)
+            print("-" * len(header))
+            
+            if args.results_file:
+                with open(args.results_file, 'a') as f:
+                    f.write("\n=== Aggregate Statistics (Raw Values) ===\n")
+                    f.write(header + "\n")
+                    f.write("-" * len(header) + "\n")
+            
+            for metric in ["mean", "median", "std_dev", "min", "max"]:
+                metric_name = metric.capitalize().ljust(20)
+                row = metric_name + " | "
+                
+                for model_name in aggregate_stats:
+                    value = aggregate_stats[model_name][metric]
+                    cell = f"{value:.2f}".ljust(15)
+                    row += cell + " | "
+                
+                print(row)
+                if args.results_file:
+                    with open(args.results_file, 'a') as f:
+                        f.write(row + "\n")
+        
+        # Create a single bar plot for the aggregate values
+        if aggregate_stats:
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            models = list(aggregate_stats.keys())
+            means = [aggregate_stats[model]["mean"] for model in models]
+            errors = [(aggregate_stats[model]["mean"] - aggregate_stats[model]["ci_low"], 
+                      aggregate_stats[model]["ci_high"] - aggregate_stats[model]["mean"]) for model in models]
+            
+            x = np.arange(len(models))
+            width = 0.6
+            
+            rects = ax.bar(x, means, width, yerr=np.transpose(errors),
+                          align='center', alpha=0.7, ecolor='black', capsize=10)
+            
+            # Add value labels on top of each bar
+            for rect in rects:
+                height = rect.get_height()
+                ax.annotate(f'{height:.2f}',
+                            xy=(rect.get_x() + rect.get_width() / 2, height),
+                            xytext=(0, 3),
+                            textcoords="offset points",
+                            ha='center', va='bottom')
+            
+            ax.set_ylabel('Value', fontsize=14)
+            ax.set_title('Aggregate Comparison Across All Questions', fontsize=16)
+            ax.set_xticks(x)
+            ax.set_xticklabels(models, rotation=45, ha='right')
+            ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.3)
+            
+            plt.tight_layout()
+            plt.savefig(os.path.join(args.output_dir, "aggregate_raw.pdf"), bbox_inches='tight', dpi=300)
+            plt.close()
+        
+        # Create a box plot for the raw values
+        if all_values_by_model:
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            models = [model for model, values in all_values_by_model.items() if values]
+            box_data = [all_values_by_model[model] for model in models]
+            
+            ax.boxplot(box_data, labels=models, showfliers=True, showmeans=True)
+            ax.set_ylabel('Value', fontsize=14)
+            ax.set_title('Distribution of Values Across All Questions', fontsize=16)
+            plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+            ax.grid(True, which='both', linestyle='--', linewidth=0.5, alpha=0.3)
+            
+            plt.tight_layout()
+            plt.savefig(os.path.join(args.output_dir, "aggregate_raw_boxplot.pdf"), bbox_inches='tight', dpi=300)
+            plt.close()
 
 
 if __name__ == "__main__":
